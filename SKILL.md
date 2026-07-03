@@ -41,6 +41,8 @@ Start from what the user or customer needs to prove, not from nodes. The workflo
 
 Before building, show the user a concise proposed structure and wait for confirmation unless they have already approved that structure in the same turn. The structure should cover app shape, main workflows/chatflows, data sources, node families, mock vs real boundaries, and validation scenarios. Do not generate DSL, create/import knowledge bases, create/start mock services, import apps, or run Console API automation until the user confirms the structure or explicitly asks to proceed without confirmation.
 
+If any part of the proposed solution is ambiguous in a way that changes the app surface, data-source boundary, credential boundary, privacy posture, or validation criteria, ask the user a short clarification question before designing or building. If the user's intent is clear enough to choose the app surface and data-source boundaries safely, make the choice in the proposed structure and explain it briefly instead of asking unnecessary questions.
+
 ## Generation Quality Gate
 
 Before importing a generated workflow, audit the DSL for node composition and demo fidelity. Do not treat "imports successfully" as a good generation.
@@ -230,6 +232,9 @@ python3 "$SKILL_DIR/scripts/dify_ce_console.py" install-guide
 4. **Design the app surface**
    - Use a **chatflow / advanced-chat** when the user experience should be conversational and the user should not manually fill many technical inputs.
    - Use a **workflow** when the flow is batch, scheduled, evaluation-oriented, API-first, or requires explicit structured inputs.
+   - If the user's intent clearly describes a conversational internal assistant, support bot, knowledge assistant, employee copilot, account assistant, or multi-turn helper, choose `advanced-chat` in the proposal by default and include the routing/classifier shape.
+   - If the user's intent clearly describes batch processing, scheduled scans, API-first automation, structured evaluation, report generation, or one-shot backend processing, choose `workflow` in the proposal by default.
+   - If the app surface is ambiguous and either `advanced-chat` or `workflow` could materially change the user experience, ask a concise clarification question before generating DSL.
    - If multiple capabilities belong to one user journey, do not split them into separate workflows only because the requirement table has many rows.
    - Add a Question Classifier or router before expensive retrieval/tool calls when not every question needs every data source.
    - For conversational apps, default to `advanced-chat` with a classifier/router when the app has distinct user intents. A plain workflow is acceptable for service/API proof, scheduled/batch work, or exposing an underlying automation canvas, but it is usually not the primary end-user chat experience.

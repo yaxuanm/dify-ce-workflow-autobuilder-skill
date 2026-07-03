@@ -57,6 +57,20 @@
 
 ## 怎么使用
 
+推荐直接从 GitHub clone 到本地 Codex skills 目录：
+
+```bash
+mkdir -p ~/.codex/skills
+git clone https://github.com/yaxuanm/dify-ce-workflow-autobuilder-skill.git \
+  ~/.codex/skills/dify-ce-workflow-autobuilder
+```
+
+如果不熟悉 Git，也可以在 GitHub 页面点击 **Code -> Download ZIP**，解压后把文件夹重命名为 `dify-ce-workflow-autobuilder`，放到：
+
+```bash
+~/.codex/skills/dify-ce-workflow-autobuilder/
+```
+
 把整个 skill 目录放到 Codex skills 目录中：
 
 ```bash
@@ -175,6 +189,21 @@ It is not a direct fit for:
 - Production data migration or destructive workspace operations
 
 ## How to Use
+
+Recommended install:
+
+```bash
+mkdir -p ~/.codex/skills
+git clone https://github.com/yaxuanm/dify-ce-workflow-autobuilder-skill.git \
+  ~/.codex/skills/dify-ce-workflow-autobuilder
+```
+
+If you do not use Git, download the ZIP from **Code -> Download ZIP**, unzip it,
+rename the folder to `dify-ce-workflow-autobuilder`, and place it under:
+
+```bash
+~/.codex/skills/dify-ce-workflow-autobuilder/
+```
 
 Place the skill folder under:
 
