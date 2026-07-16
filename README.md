@@ -2,14 +2,14 @@
 
 ## 中文简介
 
-这个 Codex skill 用来在本地或自托管 Dify CE 环境中，根据一段需求自动完成 Dify workflow / chatflow 的生成、导入、测试和迭代。它不只适用于连接企业数据源，也可以用于搜索、social listening、marketing research、内容监测、RAG、工具调用和自动化 demo。
+这个 Codex skill 用来在本地或自托管 Dify CE 环境中，根据一段需求自动完成 Dify workflow / chatflow 的生成、导入、测试和迭代。它不只适用于连接企业数据源，也可以用于搜索、social listening、marketing research、内容监测、RAG、工具调用和自动化 demo。对于展示 agent 调用 Dify workflow 的 demo，它会优先让 Codex 通过 `difyctl` 发现、inspect、run app；本地 draft 调试或 `difyctl` 不可用时才回退到 Console API helper。
 
 你只需要给 Codex 一个 demo 需求或 workflow context，它会尽量一键完成以下流程：
 
 1. 从需求生成 Dify workflow / chatflow DSL
 2. 自动导入到 Dify Studio
 3. 构建并接入 Knowledge Base
-4. 运行 Draft Run 测试
+4. 用 `difyctl` 运行 app/workflow，或在本地 draft 调试时运行 Draft Run 测试
 5. 根据 trace 自动 Debug 和持续迭代
 6. 生成测试报告和交付说明
 
@@ -31,7 +31,7 @@
   如果需求需要搜索、爬取、社媒、CRM、邮件、数据库、广告/营销分析等能力，skill 会先检查可用插件/工具和凭证条件。安装插件、配置凭证、调用外部服务或启动本地 mock service 前，会先征求用户确认。
 
 - **自动 Debug 和 Draft Run 测试**  
-  导入后会运行 draft workflow / chatflow，检查节点执行、分支、HTTP/tool 调用、Knowledge Retrieval 结果、LLM 输出和最终结果。
+  对 agent demo，导入/发布后会优先使用 `difyctl describe app` 和 `difyctl run app` 验证 Codex 能调用 workflow。对本地 draft 迭代，会回退到 Console API draft run，检查节点执行、分支、HTTP/tool 调用、Knowledge Retrieval 结果、LLM 输出和最终结果。
 
 - **支持持续迭代**  
   如果导入失败、节点报错、retrieval 结果不完整、LLM 输出和证据不一致，skill 会基于 run evidence 修改 workflow 并重新测试。
@@ -56,20 +56,6 @@
 - 生产数据迁移或破坏性 workspace 操作
 
 ## 怎么使用
-
-推荐直接从 GitHub clone 到本地 Codex skills 目录：
-
-```bash
-mkdir -p ~/.codex/skills
-git clone https://github.com/yaxuanm/dify-ce-workflow-autobuilder-skill.git \
-  ~/.codex/skills/dify-ce-workflow-autobuilder
-```
-
-如果不熟悉 Git，也可以在 GitHub 页面点击 **Code -> Download ZIP**，解压后把文件夹重命名为 `dify-ce-workflow-autobuilder`，放到：
-
-```bash
-~/.codex/skills/dify-ce-workflow-autobuilder/
-```
 
 把整个 skill 目录放到 Codex skills 目录中：
 
@@ -97,7 +83,7 @@ Build a procurement policy copilot in my local Dify CE.
 The app should answer purchase approval questions.
 Use a Knowledge Base for policy documents.
 Use a mock HTTP service for vendor risk lookup.
-Import the workflow into Dify Studio, run draft tests, debug failures, and generate a test report.
+Import the workflow into Dify Studio, have Codex call it through difyctl, fall back to local Draft Run tests if difyctl is unavailable, debug failures, and generate a test report.
 ```
 
 中文也可以：
@@ -109,7 +95,7 @@ Import the workflow into Dify Studio, run draft tests, debug failures, and gener
 它需要根据采购金额、供应商风险和合同周期判断审批路径。
 政策内容放在 Knowledge Base 里。
 供应商风险用 mock HTTP service 查询。
-请自动生成 workflow、导入 Studio、运行 Draft Run 测试、Debug，并输出测试报告。
+请自动生成 workflow、导入 Studio，让 Codex 通过 difyctl 调用 workflow；如果 difyctl 不可用，再用本地 Draft Run 测试、Debug，并输出测试报告。
 ```
 
 如果本地 CE 没有启动，也可以让 skill 输出安装指引：
@@ -135,14 +121,14 @@ python3 scripts/dify_ce_console.py install-guide
 
 ## Overview
 
-This Codex skill helps build, import, test, debug, and iterate Dify workflow / chatflow apps in a local or self-hosted Dify CE environment. It is not limited to enterprise data-source workflows; it can also support search, social listening, marketing research, content monitoring, RAG, tool use, and automation demos.
+This Codex skill helps build, import, test, debug, and iterate Dify workflow / chatflow apps in a local or self-hosted Dify CE environment. It is not limited to enterprise data-source workflows; it can also support search, social listening, marketing research, content monitoring, RAG, tool use, and automation demos. For agent-invocation demos, it now prefers having Codex use `difyctl` to discover, inspect, and run Dify apps; it falls back to the Console API helper for local draft debugging or environments where `difyctl` is unavailable.
 
 You only need to provide a demo requirement or workflow context. The skill will try to complete the full workflow-building loop:
 
 1. Generate Dify workflow / chatflow DSL from requirements
 2. Import the app into Dify Studio
 3. Build and connect Knowledge Bases when explicitly requested or approved
-4. Run Draft Run tests
+4. Run apps/workflows through `difyctl`, or use Draft Run tests for local draft debugging
 5. Debug failures from trace evidence and iterate
 6. Generate a test report and handoff summary
 
@@ -164,7 +150,7 @@ You only need to provide a demo requirement or workflow context. The skill will 
   When a workflow needs search, crawling, social platforms, CRM, email, databases, ads/marketing analytics, or other external capabilities, the skill checks available plugins/tools and credential requirements first. It asks for confirmation before installing plugins, configuring credentials, making external calls, or starting local mock services.
 
 - **Run Draft Tests and Debug**  
-  After import, the skill runs draft workflows / chatflows and checks node execution, branch routing, HTTP/tool calls, Knowledge Retrieval results, LLM output, and final outputs.
+  For agent demos, the skill uses `difyctl describe app` and `difyctl run app` so Codex proves it can call the workflow as a tool. For local draft iteration, it falls back to Console API draft runs and checks node execution, branch routing, HTTP/tool calls, Knowledge Retrieval results, LLM output, and final outputs.
 
 - **Iterate Until Passing**  
   If import fails, nodes error, retrieval is incomplete, or the final answer contradicts source evidence, the skill uses saved run evidence to revise the workflow and test again.
@@ -189,21 +175,6 @@ It is not a direct fit for:
 - Production data migration or destructive workspace operations
 
 ## How to Use
-
-Recommended install:
-
-```bash
-mkdir -p ~/.codex/skills
-git clone https://github.com/yaxuanm/dify-ce-workflow-autobuilder-skill.git \
-  ~/.codex/skills/dify-ce-workflow-autobuilder
-```
-
-If you do not use Git, download the ZIP from **Code -> Download ZIP**, unzip it,
-rename the folder to `dify-ce-workflow-autobuilder`, and place it under:
-
-```bash
-~/.codex/skills/dify-ce-workflow-autobuilder/
-```
 
 Place the skill folder under:
 
@@ -231,7 +202,7 @@ Build a procurement policy copilot in my local Dify CE.
 The app should answer purchase approval questions.
 Use a Knowledge Base for policy documents.
 Use a mock HTTP service for vendor risk lookup.
-Import the workflow into Dify Studio, run draft tests, debug failures, and generate a test report.
+Import the workflow into Dify Studio, have Codex call it through difyctl, fall back to local Draft Run tests if difyctl is unavailable, debug failures, and generate a test report.
 ```
 
 To print local CE installation guidance:

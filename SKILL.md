@@ -1,13 +1,13 @@
 ---
 name: dify-ce-workflow-autobuilder
-description: Automatically design, generate, import, test, debug, publish, and verify Dify workflows or chatflows in a local Dify CE environment. Use when the user wants Codex to build a Dify workflow from requirements, use local CE/console API, import DSL automatically, run draft tests, inspect node traces, iterate failures, or turn a demo plan into working Dify apps. Start by cloning or locating the Dify repo for product/schema grounding.
+description: Automatically design, generate, import, test, debug, publish, and verify Dify workflows or chatflows in a local Dify CE environment. Use when the user wants Codex to build a Dify workflow from requirements, use difyctl or local CE/Console API, import DSL automatically, run agent-facing app tests or draft tests, inspect traces, iterate failures, or turn a demo plan into working Dify apps. Start by cloning or locating the Dify repo for product/schema grounding.
 ---
 
 # Dify CE Workflow Autobuilder
 
 ## Purpose
 
-Build Dify workflows end to end in a local CE environment: turn requirements into a capability-proof plan, generate workflow DSL, import it through the Console API, run draft tests, inspect traces, fix failures, publish when needed, and verify the Service API.
+Build Dify workflows end to end in a local CE environment: turn requirements into a capability-proof plan, generate workflow DSL, import it through the Console API or `difyctl`, run tests through `difyctl` when available, inspect traces, fix failures, publish when needed, and verify the Service API.
 
 This skill is for local/self-hosted Dify CE work, especially demo workflows where the user expects Codex to keep iterating until the workflow runs.
 
@@ -120,7 +120,20 @@ After generation, report the node mix (`start`, `question-classifier`, `tool`, `
 
 ## API Surfaces
 
-Use two API surfaces, and do not confuse them:
+Use three execution surfaces, and do not confuse them:
+
+0. **`difyctl`: agent-facing app/workflow execution**
+   - Purpose: let Codex and other agents discover apps, inspect input schema, run Dify apps/workflows, and consume structured output without hand-rolling Console API requests.
+   - Auth: `difyctl auth login` device flow or an already configured `difyctl` profile. Confirm with `difyctl auth whoami`.
+   - Typical commands:
+     - `difyctl get app -o json`
+     - `difyctl describe app <app_id> -o json`
+     - `difyctl run app <app_id> --inputs-file /absolute/path/to/inputs.json -o json`
+     - `difyctl run app <app_id> "chat query" -o json`
+     - `difyctl run app <app_id> --stream -o json` for long-running apps
+   - Use this as the preferred run path when the demo goal is "Codex calls a Dify workflow as a tool."
+   - Before calling commands, run `difyctl help -o json` or the specific `difyctl <cmd> --help -o json` when available, so the agent follows the live CLI surface instead of relying on stale command assumptions.
+   - If `difyctl` is unavailable, not logged in, or the local CE environment has OpenAPI disabled or unhealthy, report that limitation and use the local Console API helper only as a fallback.
 
 1. **Console API: build-time and debug-time automation**
    - Purpose: import DSL, update draft apps, run draft workflows/chatflows, inspect streamed node events, publish apps, enable API, create/reuse app API keys.
@@ -132,7 +145,7 @@ Use two API surfaces, and do not confuse them:
      - `POST /console/api/apps/{app_id}/workflows/publish`
      - `POST /console/api/apps/{app_id}/api-enable`
      - `GET/POST /console/api/apps/{app_id}/api-keys`
-   - Use this for iterative debugging because it exposes draft behavior and node-level SSE events.
+   - Use this for import/update, draft-only iteration, and local CE fallback when `difyctl` cannot run the app. It exposes draft behavior and node-level SSE events.
 
 2. **Service API: published app integration test**
    - Purpose: simulate the frontend, portal, service, or external caller using endpoint + API key.
@@ -465,8 +478,58 @@ python "$SKILL_DIR/scripts/dify_ce_console.py" import \
    - Save every import result as evidence.
    - Debug import failures from the saved response body first. Common causes: invalid DSL schema, missing plugin dependency, unavailable model provider, bad app mode, unsupported node type for the local Dify version, or stale dataset IDs.
 
-10. **Run and debug draft apps with Console API**
-   - This is the primary debug loop before publishing.
+10. **Run apps with `difyctl` first when the goal is agent invocation**
+   - This is the preferred run path for an agent demo. The point is that Codex can discover the Dify app, inspect its inputs, run it, and use the output in its own task context.
+   - Preflight:
+
+```bash
+difyctl version
+difyctl auth whoami
+difyctl get workspace -o json
+difyctl get app -o json
+```
+
+   - Inspect the app before running it:
+
+```bash
+difyctl describe app "$APP_ID" -o json > /absolute/path/to/app-describe.json
+```
+
+   - Workflow app with structured inputs:
+
+```bash
+difyctl run app "$APP_ID" \
+  --inputs-file /absolute/path/to/inputs.json \
+  -o json > /absolute/path/to/run-result.json
+```
+
+   - Chatflow / advanced-chat app:
+
+```bash
+difyctl run app "$APP_ID" \
+  "What should I do next based on my current context?" \
+  -o json > /absolute/path/to/chat-run-result.json
+```
+
+   - Long-running app:
+
+```bash
+difyctl run app "$APP_ID" \
+  --inputs-file /absolute/path/to/inputs.json \
+  --stream \
+  -o json > /absolute/path/to/run-result.json
+```
+
+   - Evaluate:
+     - command exit code
+     - JSON output envelope
+     - final answer or workflow outputs
+     - any task/run identifiers returned by the CLI
+     - whether the output satisfies the acceptance matrix
+   - Save `describe` and `run` outputs as evidence. Do not claim agent invocation is tested until a `difyctl run app` call has succeeded or a specific `difyctl`/OpenAPI blocker is documented.
+
+11. **Run and debug draft apps with Console API when needed**
+   - This is the fallback and draft-iteration path before publishing, especially for local CE environments where `difyctl` is not installed, OpenAPI is disabled, or the app has not been published in a form the CLI can run.
    - Workflow app:
 
 ```bash
@@ -499,7 +562,7 @@ python "$SKILL_DIR/scripts/dify_ce_console.py" run-draft \
      - whether irrelevant branches were skipped
    - Save the run result JSON and use it to drive the next DSL edit. Do not guess from the final answer alone.
 
-11. **Debug and iterate**
+12. **Debug and iterate**
    - Import failure: inspect DSL version, node schema, app mode, missing plugin declarations, model provider names, invalid variable references, and YAML structure.
    - Draft run failure: inspect node error, inputs shape, missing variables, unreachable tool URL, model provider error, plugin credential issue, or branch condition type mismatch.
    - Retrieval mismatch: validate dataset indexing, metadata fields, retrieval query, filters, top-k, reranker/embedding setting, and whether the final LLM saw the retrieved context.
@@ -512,7 +575,7 @@ python "$SKILL_DIR/scripts/dify_ce_console.py" run-draft \
    - LLM instability: keep deterministic fallback fields in Code/Template nodes, but do not hide that the LLM is being used for final wording.
    - Scheduled trigger wording: describe it as one scheduled scan with internal condition evaluation unless there is truly a second trigger.
 
-12. **Publish and create/reuse an app API key when needed**
+13. **Publish and create/reuse an app API key when needed**
 
 ```bash
 python "$SKILL_DIR/scripts/dify_ce_console.py" publish-api-run \
@@ -525,7 +588,7 @@ python "$SKILL_DIR/scripts/dify_ce_console.py" publish-api-run \
    - Never print full API keys, JWTs, passwords, private keys, or customer secrets.
    - This path proves the published workflow can be called by a frontend or external service.
 
-13. **Run and debug with Service API endpoint + key**
+14. **Run and debug with Service API endpoint + key**
    - If the user provides an API endpoint and key, or after `publish-api-run` creates a key, use Service API testing for published behavior:
 
 ```bash
@@ -553,12 +616,14 @@ python "$SKILL_DIR/scripts/dify_ce_console.py" service-run \
      - API key belongs to a different app
    - Debug Service API failures by checking status code, response body, output schema, app publish state, API enable state, API key, input JSON, and model/tool errors.
 
-14. **Report honestly**
+15. **Report honestly**
     - Say what is built, imported, tested, and passing.
     - Separate imported/indexed/setup evidence from true workflow run evidence.
     - State mock data clearly.
     - State whether knowledge-base documents were generated/imported/indexed and whether retrieval was actually run.
     - State whether any supporting service was built, what it simulates, and which production system would replace it.
+    - State whether the app was run by `difyctl`, by the local Console API helper, by Service API, or by a manual UI test.
+    - If the user wanted an agent demo, include the exact natural-language Codex prompt and the `difyctl` commands Codex executed.
     - List gaps and whether they are demo gaps, production gaps, data gaps, or product gaps.
 
 ## User Preference Rules From Prior Feedback
