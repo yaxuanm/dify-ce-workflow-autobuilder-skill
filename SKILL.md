@@ -34,6 +34,22 @@ If no compatible Dify runtime is installed or running, use:
 python3 "$SKILL_DIR/scripts/dify_ce_console.py" install-guide
 ```
 
+## Edition and capability detection
+
+Identify whether the target is CE, self-hosted Enterprise, Cloud, or unknown, but do not choose behavior from the edition label alone. Treat edition as context for access, permissions, and packaging; choose the actual build path from the inspected runtime capabilities.
+
+For every target, record:
+
+- edition or packaging guess, such as CE Docker Compose, Enterprise self-hosted, Cloud, or unknown;
+- reachable web/API base URL and whether Codex has shell access to the host;
+- API container name/image/tag and gateway/port layout;
+- current App DSL version;
+- whether Workflow/Chatflow import APIs are present;
+- whether standalone `app.mode: agent`, `agent_packages`, Workflow Agent V2, Agent config Skill zip, and Service API tests are supported;
+- whether model providers, plugins, Knowledge, and credentials are configured enough to run.
+
+If the edition and capability signals disagree, trust the capability probe. For example, a self-hosted Enterprise runtime with App DSL `0.7.0`, `agent_packages`, Agent DSL service, Workflow Agent V2 validators, and Agent config Skill endpoints can use the same automated import/test path as a compatible CE runtime. An older CE or Enterprise runtime without those files must use the legacy Workflow/Chatflow path or stop at portable artifacts and instructions.
+
 ## Ground the target version
 
 Before designing nodes, inspect the target checkout:

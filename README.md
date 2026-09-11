@@ -15,6 +15,7 @@
 
 这个 Skill 不是按固定版本号硬编码生成 DSL，而是会先检查目标 Dify checkout 和运行环境，再选择可用能力：
 
+- 识别目标大致是 CE、self-hosted Enterprise、Cloud 还是未知环境，但不只按 edition label 决策；
 - 检测当前 App DSL 版本，例如 `CURRENT_APP_DSL_VERSION`；
 - 检测是否支持 Workflow Agent V2 节点；
 - 检测是否支持带顶层 `agent_packages` 的 New Agent 可移植 DSL；
