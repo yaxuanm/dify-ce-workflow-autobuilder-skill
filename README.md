@@ -11,6 +11,29 @@
 
 它会先读取目标 Dify checkout 和当前 DSL 版本，再决定使用旧节点、Agent V2 Composer，还是带顶层 `agent_packages` 的可移植 DSL。不会把旧版本导出的 Agent 节点直接套到新版本。
 
+## 适配版本与验证状态
+
+这个 Skill 不是按固定版本号硬编码生成 DSL，而是会先检查目标 Dify checkout 和运行环境，再选择可用能力：
+
+- 检测当前 App DSL 版本，例如 `CURRENT_APP_DSL_VERSION`；
+- 检测是否支持 Workflow Agent V2 节点；
+- 检测是否支持带顶层 `agent_packages` 的 New Agent 可移植 DSL；
+- 检测是否具备 New Agent Skill zip 上传、发布和运行测试所需的 Console API；
+- 如果目标版本不支持某项能力，会降级为该版本可用的 Workflow / Chatflow / Composer 流程，或停在可导入 DSL 与配置说明。
+
+已验证环境：
+
+- Dify CE，本地自托管；
+- Dify checkout：`main`，commit `0ca99312c1`，2026-08-20；
+- App DSL：`0.7.0`；
+- 已验证能力：Workflow / Chatflow 生成与导入、New Agent DSL 导入与发布、Workflow Agent V2 路径探测、New Agent Service API 测试、New Agent config Skill zip 打包与上传。
+
+版本边界：
+
+- Dify 早期版本如果没有 Agent V2 或 `agent_packages`，不会生成 New Agent portable package；
+- 如果没有本地 Dify CE runtime，只产出可导入 artifact、安装引导和配置说明，不会声称已完成导入或测试；
+- 插件、模型、Knowledge dataset、文件、Skill zip 和凭证属于 workspace 资源，跨环境导入后需要重新安装、授权、上传或映射。
+
 ## New Agent 支持范围
 
 Skill 会明确区分以下状态：
