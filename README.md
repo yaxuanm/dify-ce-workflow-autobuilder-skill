@@ -1,223 +1,173 @@
-# Dify CE Workflow Autobuilder Skill
+# Dify Workflow and New Agent Autobuilder Skill
 
 ## 中文简介
 
-这个 Codex skill 用来在本地或自托管 Dify CE 环境中，根据一段需求自动完成 Dify workflow / chatflow 的生成、导入、测试和迭代。它不只适用于连接企业数据源，也可以用于搜索、social listening、marketing research、内容监测、RAG、工具调用和自动化 demo。对于展示 agent 调用 Dify workflow 的 demo，它会优先让 Codex 通过 `difyctl` 发现、inspect、run app；本地 draft 调试或 `difyctl` 不可用时才回退到 Console API helper。
+这个 Codex Skill 用于在本地或自托管 Dify 环境中，设计、生成、导入、测试、调试和验证：
 
-你只需要给 Codex 一个 demo 需求或 workflow context，它会尽量一键完成以下流程：
+- Workflow / Chatflow；
+- 独立 New Agent App；
+- Workflow 中的 Agent V2 节点；
+- New Agent 与 Workflow 的发布、绑定和运行验证。
 
-1. 从需求生成 Dify workflow / chatflow DSL
-2. 自动导入到 Dify Studio
-3. 构建并接入 Knowledge Base
-4. 用 `difyctl` 运行 app/workflow，或在本地 draft 调试时运行 Draft Run 测试
-5. 根据 trace 自动 Debug 和持续迭代
-6. 生成测试报告和交付说明
+它会先读取目标 Dify checkout 和当前 DSL 版本，再决定使用旧节点、Agent V2 Composer，还是带顶层 `agent_packages` 的可移植 DSL。不会把旧版本导出的 Agent 节点直接套到新版本。
 
-## 主要功能
+## New Agent 支持范围
 
-- **指导安装 Dify CE**  
-  如果本地没有安装或没有启动 Dify CE，skill 会返回 Docker Compose 安装指引，而不是继续执行导入或测试命令。
+Skill 会明确区分以下状态：
 
-- **从需求到 Studio 导入**  
-  根据用户提供的需求、demo context 或 workflow plan，生成 Dify DSL，并通过本地 Console API 自动导入到 Dify Studio。
+1. Build Draft 已生成；
+2. Build Draft 已 Apply 到普通 Draft；
+3. Agent Draft 已验证；
+4. Agent 已 Publish，并产生不可变 Snapshot；
+5. Workflow Draft 已绑定正确 Agent/Snapshot；
+6. Workflow 已 Publish；
+7. 运行 trace 已证明实际调用了目标 Agent。
 
-- **按需构建 Knowledge Base**  
-  如果用户明确要求使用 Knowledge Base / RAG，或确认了 skill 提出的 KB 方案，skill 会准备 KB 文档、导入并索引，然后把 dataset id 接入 workflow。
+当前 App DSL 通过顶层 `agent_packages` 搬运 Agent Soul。Workflow Agent V2 节点使用：
 
-- **支持搜索、社媒监听和 Marketing 场景**  
-  对于 web search、social listening、competitor monitoring、campaign research、content monitoring 等需求，skill 会优先探索可用插件、工具、Agent、搜索/爬虫能力或 API，而不是把场景强行塞进固定节点模板。
-
-- **探索插件和工具能力**  
-  如果需求需要搜索、爬取、社媒、CRM、邮件、数据库、广告/营销分析等能力，skill 会先检查可用插件/工具和凭证条件。安装插件、配置凭证、调用外部服务或启动本地 mock service 前，会先征求用户确认。
-
-- **自动 Debug 和 Draft Run 测试**  
-  对 agent demo，导入/发布后会优先使用 `difyctl describe app` 和 `difyctl run app` 验证 Codex 能调用 workflow。对本地 draft 迭代，会回退到 Console API draft run，检查节点执行、分支、HTTP/tool 调用、Knowledge Retrieval 结果、LLM 输出和最终结果。
-
-- **支持持续迭代**  
-  如果导入失败、节点报错、retrieval 结果不完整、LLM 输出和证据不一致，skill 会基于 run evidence 修改 workflow 并重新测试。
-
-- **生成测试报告**  
-  完成后会输出 app id、测试输入、运行结果、trace evidence、mock 数据说明、当前限制和下一步建议。
-
-## 适用环境
-
-这个 skill 适合：
-
-- 本地或自托管 Dify CE
-- Codex 可以访问 shell / Docker
-- Dify API container 可以读取 `SECRET_KEY`
-- 已创建 Dify console account
-- workflow 所需模型 provider / plugin credentials 已配置，或可以使用 mock service
-
-不适合直接用于：
-
-- Dify Cloud
-- 无法访问容器或 `SECRET_KEY` 的客户环境
-- 生产数据迁移或破坏性 workspace 操作
-
-## 怎么使用
-
-把整个 skill 目录放到 Codex skills 目录中：
-
-```bash
-~/.codex/skills/dify-ce-workflow-autobuilder/
+```yaml
+data:
+  type: agent
+  version: '2'
+  agent_node_kind: dify_agent
+  agent_binding:
+    binding_type: inline_agent
+    package_ref: agent_1
+  agent_job:
+    schema_version: 1
+    mode: tell_agent_what_to_do
 ```
 
-目录里至少包含：
+`Agent Soul` 保存 Prompt、Model、Skills、Files、Tools、Knowledge、Memory 等可复用能力；`agent_job` 只描述当前 Workflow 节点的任务、上游输入和输出契约。
+
+## 可移植性限制
+
+New Agent DSL 不是完整 workspace clone。导出/导入后通常仍需：
+
+- 重新上传 Skill 和 File；YAML 不包含它们的实际文件内容；
+- 重新授权模型和 Tool；凭证不会导出；
+- 重新映射目标 workspace 的 Knowledge dataset；
+- 重新配置 human contact、环境变量和 secret；
+- 读取并解决 import warnings；
+- 发布 Agent，并在需要时重新绑定/发布 Workflow。
+
+跨 workspace 导入 Workflow package 时，原来的 Roster identity 不会被保留，节点会 materialize 为 Inline Agent。需要多个 Workflow 共享同一个 Agent 时，应先导入/创建独立 Agent、发布它，再在目标 workspace 绑定。
+
+## New Agent Skill zip
+
+当 New Agent 需要可复用的业务规则、SOP、输出规范或工具使用说明时，Skill 会先给出 Agent 设计方案，说明哪些内容放在 Prompt、哪些内容打包成 New Agent config Skill zip。用户确认后，Codex 才会生成、上传并测试 Skill zip。
+
+Skill zip 是用户可编辑资产，不是 Dify Plugin。用户可以修改 `SKILL.md` 或补充文件，然后让 Codex 重新打包、上传和测试。
+
+## 主要文件
 
 ```text
 SKILL.md
-README.md
-scripts/
-  dify_ce_console.py
+agents/openai.yaml
+references/new-agent-dsl.md
+scripts/dify_ce_console.py
+scripts/validate_new_agent_dsl.py
 ```
 
-然后新开一个 Codex session，让 Codex 重新加载 skills。
+## 使用方式
 
-你可以直接给一个需求，例如：
+把目录安装到：
+
+```text
+~/.codex/skills/dify-ce-workflow-autobuilder/
+```
+
+然后可以这样请求：
 
 ```text
 Use the dify-ce-workflow-autobuilder skill.
 
-Build a procurement policy copilot in my local Dify CE.
-The app should answer purchase approval questions.
-Use a Knowledge Base for policy documents.
-Use a mock HTTP service for vendor risk lookup.
-Import the workflow into Dify Studio, have Codex call it through difyctl, fall back to local Draft Run tests if difyctl is unavailable, debug failures, and generate a test report.
+Build a standalone New Agent for product-evidence review and place it in an
+event-driven Workflow. Ground the DSL in my current Dify checkout, generate a
+portable agent package, validate it, import it, report omitted assets and
+authorization gaps, publish only after configuration passes, then verify the
+published Agent and Workflow traces.
 ```
 
-中文也可以：
-
-```text
-使用 dify-ce-workflow-autobuilder skill。
-
-帮我在本地 Dify CE 里生成一个采购政策助手。
-它需要根据采购金额、供应商风险和合同周期判断审批路径。
-政策内容放在 Knowledge Base 里。
-供应商风险用 mock HTTP service 查询。
-请自动生成 workflow、导入 Studio，让 Codex 通过 difyctl 调用 workflow；如果 difyctl 不可用，再用本地 Draft Run 测试、Debug，并输出测试报告。
-```
-
-如果本地 CE 没有启动，也可以让 skill 输出安装指引：
+静态校验 New Agent DSL：
 
 ```bash
-python3 scripts/dify_ce_console.py install-guide
+python3 scripts/validate_new_agent_dsl.py /absolute/path/to/app.yml \
+  --target-repo /absolute/path/to/dify \
+  --out /absolute/path/to/validation.json
 ```
 
-## Notes
+导入并显式确认 dependency-pending 状态：
 
-- 只有在用户明确要求或确认方案后，skill 才会创建/上传 Knowledge Base 或启动本地 mock service。
-- 插件安装、外部搜索/爬取、可能产生费用或 rate limit 的调用，需要用户确认后再执行。
-- Knowledge Base 默认会优先使用 high-quality indexing 和当前 workspace 中最好的可用 embedding model。
-- 用户只需要提供必要信息，例如数据来源、是真实数据还是 mock、数据位置、是否安全可导入、代表性测试问题。
-- 低层参数如 embedding model、top-k、chunking、rerank 默认由 skill 选择；用户可以在 Dify Knowledge 页面后续自行调参。
-- 对于需要多个证据维度的场景，skill 会倾向使用多个 targeted Knowledge Retrieval 节点，而不是只依赖一个宽泛 query。
+```bash
+python3 scripts/dify_ce_console.py import /absolute/path/to/app.yml \
+  --confirm-pending \
+  --out /absolute/path/to/import-result.json
+```
 
-欢迎大家测试并提出意见。
+本地自托管环境还可以分别执行 New Agent 生命周期操作：
+
+```bash
+python3 scripts/dify_ce_console.py agent-create --name "Demo Agent"
+python3 scripts/dify_ce_console.py agent-build-checkout --agent-id "$AGENT_ID"
+python3 scripts/dify_ce_console.py agent-build-save --agent-id "$AGENT_ID" --payload-json build-payload.json
+python3 scripts/dify_ce_console.py agent-build-apply --agent-id "$AGENT_ID"
+python3 scripts/dify_ce_console.py agent-composer --agent-id "$AGENT_ID" --payload-json composer.json --validate-only
+python3 scripts/dify_ce_console.py agent-publish --agent-id "$AGENT_ID"
+python3 scripts/dify_ce_console.py agent-inspect --agent-id "$AGENT_ID"
+```
+
+生成并上传 New Agent config Skill zip：
+
+```bash
+python3 scripts/dify_ce_console.py agent-skill-package \
+  --skill-dir /absolute/path/to/agent-skill \
+  --out /absolute/path/to/skill-package.json
+
+python3 scripts/dify_ce_console.py agent-skill-upload \
+  --agent-id "$AGENT_ID" \
+  --skill-dir /absolute/path/to/agent-skill \
+  --out /absolute/path/to/skill-upload.json
+
+python3 scripts/dify_ce_console.py agent-skills-list \
+  --agent-id "$AGENT_ID" \
+  --out /absolute/path/to/skills-list.json
+```
+
+测试已发布 New Agent：
+
+```bash
+python3 scripts/dify_ce_console.py service-chat-run \
+  --api-key-env DIFY_AGENT_API_KEY \
+  --query "Review this demo request." \
+  --inputs-json '{}' \
+  --out /absolute/path/to/agent-run.json
+```
+
+## 安全边界
+
+- 不会在没有明确授权时重启、升级或清理现有 Dify 环境。
+- 不会打印模型、Tool、JWT、SSH 或 API 密钥。
+- 导入、配置、Apply、Publish、运行和外部写入会分别记录证据。
+- 创建 Knowledge、安装插件、配置凭证、产生费用或执行外部写入前会确认边界。
+- Build Draft 未 Apply、Agent 未 Publish、Workflow 未重新发布时，不会声称新配置已生效。
 
 ---
 
-# Dify CE Workflow Autobuilder Skill
+## English overview
 
-## Overview
+This Codex Skill builds and verifies Dify Workflows, Chatflows, standalone New Agent apps, and Workflow Agent V2 nodes against the exact target checkout.
 
-This Codex skill helps build, import, test, debug, and iterate Dify workflow / chatflow apps in a local or self-hosted Dify CE environment. It is not limited to enterprise data-source workflows; it can also support search, social listening, marketing research, content monitoring, RAG, tool use, and automation demos. For agent-invocation demos, it now prefers having Codex use `difyctl` to discover, inspect, and run Dify apps; it falls back to the Console API helper for local draft debugging or environments where `difyctl` is unavailable.
+It adds version-aware handling for:
 
-You only need to provide a demo requirement or workflow context. The skill will try to complete the full workflow-building loop:
+- App DSL `0.7.0`-style `agent_packages` when supported by the target;
+- standalone `app.mode: agent` imports;
+- Agent V2 discriminators and portable `package_ref` bindings;
+- Agent Soul versus Workflow `agent_job` ownership;
+- Build Draft → Apply → validate → publish → bind → runtime evidence;
+- omitted Skill/File assets, reset Tool/model credentials, unresolved Knowledge, contacts, and secrets;
+- published New Agent testing through `/v1/chat-messages`.
 
-1. Generate Dify workflow / chatflow DSL from requirements
-2. Import the app into Dify Studio
-3. Build and connect Knowledge Bases when explicitly requested or approved
-4. Run apps/workflows through `difyctl`, or use Draft Run tests for local draft debugging
-5. Debug failures from trace evidence and iterate
-6. Generate a test report and handoff summary
+The built-in Workflow graph generator is not assumed to be an Agent-package generator. The Skill either creates a complete portable App DSL envelope or uses Studio/Composer to materialize a V2 node and binding.
 
-## Key Capabilities
-
-- **Guide Dify CE installation**  
-  If local Dify CE is not installed or not running, the skill returns Docker Compose installation guidance instead of continuing with import or debug commands.
-
-- **Generate and import into Studio**  
-  From a requirement, demo context, or workflow plan, the skill generates Dify DSL and imports it into Dify Studio through the local Console API.
-
-- **Build Knowledge Bases when requested or approved**  
-  If the user explicitly asks for a Knowledge Base / RAG, or confirms the proposed KB plan, the skill prepares KB documents, imports/indexes them, and wires dataset IDs into workflow nodes.
-
-- **Support Search, Social Listening, and Marketing Use Cases**  
-  For web search, social listening, competitor monitoring, campaign research, and content monitoring, the skill explores available plugins, tools, Agent patterns, search/crawler capabilities, or APIs instead of forcing every workflow into a fixed node template.
-
-- **Explore Plugins and Tools**  
-  When a workflow needs search, crawling, social platforms, CRM, email, databases, ads/marketing analytics, or other external capabilities, the skill checks available plugins/tools and credential requirements first. It asks for confirmation before installing plugins, configuring credentials, making external calls, or starting local mock services.
-
-- **Run Draft Tests and Debug**  
-  For agent demos, the skill uses `difyctl describe app` and `difyctl run app` so Codex proves it can call the workflow as a tool. For local draft iteration, it falls back to Console API draft runs and checks node execution, branch routing, HTTP/tool calls, Knowledge Retrieval results, LLM output, and final outputs.
-
-- **Iterate Until Passing**  
-  If import fails, nodes error, retrieval is incomplete, or the final answer contradicts source evidence, the skill uses saved run evidence to revise the workflow and test again.
-
-- **Generate Test Reports**  
-  The final handoff includes app id, test inputs, run results, trace evidence, mock data notes, current limitations, and recommended next steps.
-
-## Supported Environment
-
-This skill is intended for:
-
-- Local or self-hosted Dify CE
-- Shell and Docker access from Codex
-- Access to the Dify API container `SECRET_KEY`
-- An existing Dify console account
-- Configured model providers / plugin credentials, or mock services for demo use
-
-It is not a direct fit for:
-
-- Dify Cloud
-- Locked-down customer environments without container or `SECRET_KEY` access
-- Production data migration or destructive workspace operations
-
-## How to Use
-
-Place the skill folder under:
-
-```bash
-~/.codex/skills/dify-ce-workflow-autobuilder/
-```
-
-The folder should include:
-
-```text
-SKILL.md
-README.md
-scripts/
-  dify_ce_console.py
-```
-
-Then start a new Codex session so Codex can reload the available skills.
-
-Example prompt:
-
-```text
-Use the dify-ce-workflow-autobuilder skill.
-
-Build a procurement policy copilot in my local Dify CE.
-The app should answer purchase approval questions.
-Use a Knowledge Base for policy documents.
-Use a mock HTTP service for vendor risk lookup.
-Import the workflow into Dify Studio, have Codex call it through difyctl, fall back to local Draft Run tests if difyctl is unavailable, debug failures, and generate a test report.
-```
-
-To print local CE installation guidance:
-
-```bash
-python3 scripts/dify_ce_console.py install-guide
-```
-
-## Notes
-
-- Knowledge Bases default to strong settings, such as high-quality indexing and the best configured embedding model available in the workspace.
-- The skill creates/uploads Knowledge Bases or starts local mock services only when explicitly requested by the user or after the user confirms the proposed plan.
-- Plugin installation, external search/crawling, and calls that may incur cost or rate limits require user confirmation before execution.
-- Users only need to provide necessary decisions: data source, mock vs real data, data location, safety/permission boundaries, and representative test questions.
-- Low-level settings such as embedding model, top-k, chunking, and rerank can be tuned later in Dify Knowledge settings.
-- For workflows requiring multiple evidence facets, the skill may use multiple targeted Knowledge Retrieval nodes instead of a single broad retrieval query.
-
-Feedback and test results are welcome.
+Import success is not treated as runtime readiness. The Skill reports static validation, import warnings, configuration, publish state, binding state, draft tests, published tests, and external delivery separately.

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Dify Workflow and New Agent Builder"
+  short_description: "Build and validate Dify DSL with New Agent support"
+  default_prompt: "Use $dify-ce-workflow-autobuilder to build and verify a version-matched Dify Workflow or New Agent app from my requirements."
+policy:
+  allow_implicit_invocation: true
