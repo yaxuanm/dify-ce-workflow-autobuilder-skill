@@ -75,7 +75,11 @@ def read_target_version(repo: pathlib.Path | None, report: Report) -> str | None
         return None
     version_file = repo / "api/constants/dsl_version.py"
     package_service = repo / "api/services/agent/dsl_service.py"
-    discriminator = repo / "api/core/workflow/nodes/agent_v2/discriminator.py"
+    agent_v2_markers = [
+        repo / "api/core/workflow/nodes/agent_v2/discriminator.py",
+        repo / "api/core/workflow/nodes/agent_v2/validators.py",
+        repo / "api/core/workflow/nodes/agent_v2/entities.py",
+    ]
     if not version_file.is_file():
         report.error("target_dsl_version_missing", str(version_file), "Target checkout has no DSL version file.")
         return None
@@ -83,8 +87,12 @@ def read_target_version(repo: pathlib.Path | None, report: Report) -> str | None
     if not match:
         report.error("target_dsl_version_unreadable", str(version_file), "Could not read CURRENT_APP_DSL_VERSION.")
         return None
-    if not discriminator.is_file():
-        report.error("agent_v2_not_supported", str(discriminator), "Target checkout has no Agent V2 discriminator.")
+    if not any(marker.is_file() for marker in agent_v2_markers):
+        report.error(
+            "agent_v2_not_supported",
+            "api/core/workflow/nodes/agent_v2",
+            "Target checkout has no recognized Agent V2 workflow node implementation.",
+        )
     if not package_service.is_file():
         report.error(
             "agent_packages_not_supported",

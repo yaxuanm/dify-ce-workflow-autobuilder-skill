@@ -2,7 +2,7 @@
 
 ## 中文简介
 
-这个 Codex Skill 用于在本地或自托管 Dify 环境中，设计、生成、导入、测试、调试和验证：
+这个 Codex Skill 用于在本地或自托管 Dify CE / Enterprise 环境中，设计、生成、导入、测试、调试和验证：
 
 - Workflow / Chatflow；
 - 独立 New Agent App；
@@ -27,11 +27,13 @@
 - Dify checkout：`main`，commit `0ca99312c1`，2026-08-20；
 - App DSL：`0.7.0`；
 - 已验证能力：Workflow / Chatflow 生成与导入、New Agent DSL 导入与发布、Workflow Agent V2 路径探测、New Agent Service API 测试、New Agent config Skill zip 打包与上传。
+- Dify Enterprise，自托管 runtime `3.12.1`；
+- 企业版已只读验证能力：App DSL `0.7.0`、`agent_packages` import/export、`AppMode.AGENT`、Agent DSL service、Workflow Agent V2 validators、Agent config Skill zip upload/list/download API。
 
 版本边界：
 
 - Dify 早期版本如果没有 Agent V2 或 `agent_packages`，不会生成 New Agent portable package；
-- 如果没有本地 Dify CE runtime，只产出可导入 artifact、安装引导和配置说明，不会声称已完成导入或测试；
+- 如果没有可访问的本地或自托管 Dify runtime，只产出可导入 artifact、安装引导和配置说明，不会声称已完成导入或测试；
 - 插件、模型、Knowledge dataset、文件、Skill zip 和凭证属于 workspace 资源，跨环境导入后需要重新安装、授权、上传或映射。
 
 ## New Agent 支持范围

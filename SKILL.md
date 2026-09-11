@@ -1,9 +1,9 @@
 ---
 name: dify-ce-workflow-autobuilder
-description: Design, generate, validate, import, test, debug, publish, and verify Dify Community workflows, chatflows, standalone New Agent apps, and Workflow Agent V2 nodes in a local or self-hosted environment. Use when Codex needs to turn requirements into Dify DSL, create portable agent_packages, connect a published New Agent to a Workflow, use difyctl or Console/Service APIs, inspect traces, or iterate until an app works. Ground every generated artifact in the exact target Dify checkout and version.
+description: Design, generate, validate, import, test, debug, publish, and verify Dify CE or self-hosted Enterprise workflows, chatflows, standalone New Agent apps, and Workflow Agent V2 nodes. Use when Codex needs to turn requirements into Dify DSL, create portable agent_packages, connect a published New Agent to a Workflow, use difyctl or Console/Service APIs, inspect traces, or iterate until an app works. Ground every generated artifact in the exact target Dify checkout and version.
 ---
 
-# Dify CE Workflow and New Agent Autobuilder
+# Dify Self-Hosted Workflow and New Agent Autobuilder
 
 Build Dify apps end to end. Turn requirements into an acceptance plan, generate version-matched DSL, import it, resolve workspace-specific dependencies, test the correct runtime surface, debug from traces, publish when requested, and verify the published behavior.
 
@@ -18,7 +18,7 @@ Build Dify apps end to end. Turn requirements into an acceptance plan, generate 
 
 ## Preconditions
 
-Use the automated Console path only when Dify is local or self-hosted and Codex can reach the host shell and API container. Typical requirements are:
+Use the automated Console path only when Dify CE or Enterprise is local/self-hosted and Codex can reach the host shell and API container. Typical requirements are:
 
 - a reachable Dify web/API base URL;
 - a running API container, commonly `docker-api-1`;
@@ -28,7 +28,7 @@ Use the automated Console path only when Dify is local or self-hosted and Codex 
 
 For Dify Cloud or locked-down environments, review or generate portable DSL, use supported public/Service APIs, or provide manual UI steps. Do not assume backend access.
 
-If CE is not installed or running, use:
+If no compatible Dify runtime is installed or running, use:
 
 ```bash
 python3 "$SKILL_DIR/scripts/dify_ce_console.py" install-guide
@@ -41,14 +41,15 @@ Before designing nodes, inspect the target checkout:
 ```bash
 rg -n 'CURRENT_APP_DSL_VERSION' <dify-repo>/api/constants/dsl_version.py
 test -f <dify-repo>/api/services/agent/dsl_service.py && echo agent-package-dsl-supported
-test -f <dify-repo>/api/core/workflow/nodes/agent_v2/discriminator.py && echo agent-v2-supported
+test -f <dify-repo>/api/core/workflow/nodes/agent_v2/discriminator.py -o \
+     -f <dify-repo>/api/core/workflow/nodes/agent_v2/validators.py && echo agent-v2-supported
 ```
 
 Read exported DSLs from that same runtime when available. Prefer a fresh export from the target workspace as the canonical shape.
 
 Classify support:
 
-- **Legacy only:** no Agent V2 discriminator or portable Agent package service. Generate only schemas supported by that version.
+- **Legacy only:** no recognized Agent V2 implementation or portable Agent package service. Generate only schemas supported by that version.
 - **Agent V2 without portable packages:** create/publish the Agent through the verified Composer/Agent APIs or UI, then bind it to the Workflow. Do not invent a portable package.
 - **Portable New Agent DSL:** `agent_packages` import/export is present. Follow [references/new-agent-dsl.md](references/new-agent-dsl.md).
 
