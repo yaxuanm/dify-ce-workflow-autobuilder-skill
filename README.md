@@ -102,6 +102,43 @@ scripts/validate_new_agent_dsl.py
 ~/.codex/skills/dify-ce-workflow-autobuilder/
 ```
 
+### 企业版 / 远程自托管用法
+
+**方式 1：Codex 能 SSH 到 Dify Enterprise 服务器**
+
+这是最自动化的方式，适合用户自己的 self-hosted Enterprise、测试环境或 demo 环境。用户提供服务器连接信息和 Dify 入口，例如：
+
+```text
+这是我的 Dify Enterprise 服务器：
+host: <server-host-or-ip>
+ssh user: <user>
+ssh key: <local-private-key-path>
+Dify 入口: https://<dify-domain> 或 http://<host>
+
+请用 dify-ce-workflow-autobuilder skill 生成并测试一个 workflow/chatflow。
+```
+
+Skill 会先做只读检查，再等待用户确认设计方案。确认后才会继续：
+
+1. 检查 Dify 版本、容器、DSL 版本、Agent/Workflow 支持情况；
+2. 输出 app 设计方案，等待确认；
+3. 生成 DSL、Agent package 或 Agent Skill zip；
+4. 通过服务器本地 Console API 导入到 Enterprise；
+5. 检查依赖、模型、插件、Knowledge、Skill zip；
+6. 执行 draft run、publish 或 Service API test；
+7. 根据 trace 自动 debug；
+8. 输出已验证结果和剩余配置边界。
+
+**方式 2：Codex 不能 SSH，只生成 artifact**
+
+适合客户环境不能提供 shell access、不能暴露 Console API，或只允许人工导入 Studio 的情况。Skill 会：
+
+1. 根据需求生成 DSL、Agent Skill zip、Knowledge 文档或本地服务说明；
+2. 静态校验目标版本和结构；
+3. 标注需要安装的插件、模型、凭证和 Knowledge；
+4. 提供导入说明和测试 checklist；
+5. 停在可导入 artifact，不会声称已完成 draft run 或 runtime debug。
+
 然后可以这样请求：
 
 ```text
