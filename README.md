@@ -1,5 +1,27 @@
 # Dify Workflow and New Agent Autobuilder Skill
 
+> A version-aware Codex Skill for building, testing, debugging, and validating Dify Workflows, Chatflows, and New Agent apps across self-hosted Community Edition and Enterprise environments.
+
+## Overview
+
+This project turns an AI-workflow request into a version-matched Dify implementation, then verifies the result rather than stopping at generated YAML. It probes the target checkout and runtime before choosing the appropriate path for a Workflow, Chatflow, Workflow Agent V2, or portable New Agent package.
+
+### What it helps you do
+
+- Design and generate Dify Workflow and Chatflow DSLs from requirements.
+- Build, publish, connect, and test standalone New Agent apps.
+- Detect version and capability boundaries before using Agent V2 or `agent_packages`.
+- Validate imports, publication, API behavior, and runtime readiness in self-hosted CE or Enterprise.
+- Produce portable artifacts and clear downgrade paths when a target environment lacks a newer capability.
+
+### Why it is useful
+
+Dify DSL compatibility is version- and runtime-dependent. This Skill prevents a common failure mode: treating a successful import as proof that an app can be published, connected, and run. It separates static DSL validity from configured credentials, runtime availability, authorization, and end-user behavior.
+
+### Core technologies
+
+`Dify` · `Agentic Workflows` · `RAG` · `Python` · `REST APIs` · `Self-hosted Enterprise` · `Codex Skills`
+
 ## 中文简介
 
 这个 Codex Skill 用于在本地或自托管 Dify CE / Enterprise 环境中，设计、生成、导入、测试、调试和验证：
