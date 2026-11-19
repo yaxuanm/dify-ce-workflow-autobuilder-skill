@@ -57,6 +57,10 @@ def ce_install_guide() -> str:
         - Docker Compose is 2.24.0 or later.
         - For local testing, use at least 2 CPU cores and 4 GiB RAM; prefer 8 GiB memory on Docker Desktop.
         - Port 80 is available, or edit EXPOSE_NGINX_PORT in dify/docker/.env before starting.
+        - On 1.20+, put backend overrides in docker/envs/core-services/api-worker.env and Web overrides
+          (for example NEXT_PUBLIC_ENABLE_AGENT_V2_IN_CHATFLOW=true) in docker/envs/core-services/web.env.
+          shared.env is no longer loaded; rename it to api-worker.env if you have one.
+          Apply changes with `docker compose up -d`; a plain restart does not reload env files.
 
         Commands:
 
