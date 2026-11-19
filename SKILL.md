@@ -1,6 +1,6 @@
 ---
 name: dify-ce-workflow-autobuilder
-description: Design, generate, validate, import, test, debug, publish, and verify Dify CE or self-hosted Enterprise workflows, chatflows, standalone New Agent apps, and Workflow Agent V2 nodes. Use when Codex needs to turn requirements into Dify DSL, create portable agent_packages, connect a published New Agent to a Workflow, use difyctl or Console/Service APIs, inspect traces, or iterate until an app works. Ground every generated artifact in the exact target Dify checkout and version.
+description: Design, generate, validate, import, test, debug, publish, and verify Dify CE or self-hosted Enterprise workflows, chatflows, standalone New Agent apps, and Workflow Agent V2 nodes. Use when the user needs to turn requirements into Dify DSL, create portable agent_packages, connect a published New Agent to a Workflow, use difyctl or Console/Service APIs, inspect traces, or iterate until an app works. Ground every generated artifact in the exact target Dify checkout and version.
 ---
 
 # Dify Self-Hosted Workflow and New Agent Autobuilder
@@ -16,9 +16,15 @@ Build Dify apps end to end. Turn requirements into an acceptance plan, generate 
 5. Treat import, configuration, publish, draft execution, published execution, and external delivery as separate evidence layers.
 6. Never print credentials, API keys, JWTs, private keys, or secret values.
 
+## Running the bundled scripts
+
+The scripts live in this skill's folder: `${CLAUDE_SKILL_DIR}/scripts/`. Reference files also write `${CLAUDE_SKILL_DIR}`; it means this same folder. Each Bash call starts a new shell, so write the full path every time instead of relying on an exported variable.
+
+`dify_ce_console.py` needs the Python packages `requests` and `pyyaml`. Check once with `python3 -c "import requests, yaml"`; if that fails, ask the user before running `python3 -m pip install --user requests pyyaml`.
+
 ## Preconditions
 
-Use the automated Console path only when Dify CE or Enterprise is local/self-hosted and Codex can reach the host shell and API container. Typical requirements are:
+Use the automated Console path only when Dify CE or Enterprise is local/self-hosted and Claude can reach the host shell and API container. Typical requirements are:
 
 - a reachable Dify web/API base URL;
 - a running API container, commonly `docker-api-1`;
@@ -31,7 +37,7 @@ For Dify Cloud or locked-down environments, review or generate portable DSL, use
 If no compatible Dify runtime is installed or running, use:
 
 ```bash
-python3 "$SKILL_DIR/scripts/dify_ce_console.py" install-guide
+python3 "${CLAUDE_SKILL_DIR}/scripts/dify_ce_console.py" install-guide
 ```
 
 ## Edition and capability detection
@@ -41,7 +47,7 @@ Identify whether the target is CE, self-hosted Enterprise, Cloud, or unknown, bu
 For every target, record:
 
 - edition or packaging guess, such as CE Docker Compose, Enterprise self-hosted, Cloud, or unknown;
-- reachable web/API base URL and whether Codex has shell access to the host;
+- reachable web/API base URL and whether Claude has shell access to the host;
 - API container name/image/tag and gateway/port layout;
 - current App DSL version;
 - whether Workflow/Chatflow import APIs are present;
@@ -129,7 +135,7 @@ Before generating or uploading any Agent Skill package, show the user a concise 
 - whether the Skill package is demo-safe, based on user-provided content, or expected to be edited later;
 - the tests that will prove the Skill is actually used.
 
-Generate a Skill zip only after the user confirms that boundary or explicitly asks to proceed autonomously. The package must contain a valid `SKILL.md` with YAML frontmatter `name` and `description`; keep the name stable and user-editable. Treat the zip as a user-owned artifact: users may download, edit `SKILL.md` or supporting files, and ask Codex to re-upload and retest it.
+Generate a Skill zip only after the user confirms that boundary or explicitly asks to proceed autonomously. The package must contain a valid `SKILL.md` with YAML frontmatter `name` and `description`; keep the name stable and user-editable. Treat the zip as a user-owned artifact: users may download, edit `SKILL.md` or supporting files, and ask Claude to re-upload and retest it.
 
 Dify Agent Skill packages are not Dify Plugins. Do not call them plugins. They are uploaded as Agent config skills and stored as zip archives; portable Agent DSL may reference them as omitted/missing assets, but the zip payload itself must be uploaded or reattached in the target workspace.
 
@@ -217,7 +223,7 @@ Use target-version exports as patterns. Save generated YAML under a dedicated ca
 For any New Agent artifact, run:
 
 ```bash
-python3 "$SKILL_DIR/scripts/validate_new_agent_dsl.py" \
+python3 "${CLAUDE_SKILL_DIR}/scripts/validate_new_agent_dsl.py" \
   /absolute/path/to/app.yml \
   --target-repo /absolute/path/to/dify \
   --out /absolute/path/to/new-agent-validation.json
@@ -237,7 +243,7 @@ For non-Agent DSL, still audit:
 ### 7. Import
 
 ```bash
-python3 "$SKILL_DIR/scripts/dify_ce_console.py" import \
+python3 "${CLAUDE_SKILL_DIR}/scripts/dify_ce_console.py" import \
   /absolute/path/to/app.yml \
   --name "Demo App" \
   --out /absolute/path/to/import-result.json
@@ -246,7 +252,7 @@ python3 "$SKILL_DIR/scripts/dify_ce_console.py" import \
 If the import returns `pending`, inspect dependencies and confirm only after the user-approved dependency boundary is still valid:
 
 ```bash
-python3 "$SKILL_DIR/scripts/dify_ce_console.py" import \
+python3 "${CLAUDE_SKILL_DIR}/scripts/dify_ce_console.py" import \
   /absolute/path/to/app.yml \
   --confirm-pending \
   --out /absolute/path/to/import-result.json
@@ -271,16 +277,16 @@ After import:
 For deterministic standalone Agent lifecycle operations in a local/self-hosted target, the helper exposes:
 
 ```bash
-python3 "$SKILL_DIR/scripts/dify_ce_console.py" agent-create --name "Demo Agent" --out agent-create.json
-python3 "$SKILL_DIR/scripts/dify_ce_console.py" agent-build-checkout --agent-id "$AGENT_ID" --out build-checkout.json
-python3 "$SKILL_DIR/scripts/dify_ce_console.py" agent-build-save --agent-id "$AGENT_ID" --payload-json build-payload.json
-python3 "$SKILL_DIR/scripts/dify_ce_console.py" agent-build-apply --agent-id "$AGENT_ID" --out build-apply.json
-python3 "$SKILL_DIR/scripts/dify_ce_console.py" agent-composer --agent-id "$AGENT_ID" --payload-json composer.json --validate-only
-python3 "$SKILL_DIR/scripts/dify_ce_console.py" agent-publish --agent-id "$AGENT_ID" --version-note "Validated demo version"
-python3 "$SKILL_DIR/scripts/dify_ce_console.py" agent-inspect --agent-id "$AGENT_ID" --out agent-inspect.json
-python3 "$SKILL_DIR/scripts/dify_ce_console.py" agent-skill-package --skill-dir /absolute/path/to/agent-skill --out skill-package.json
-python3 "$SKILL_DIR/scripts/dify_ce_console.py" agent-skill-upload --agent-id "$AGENT_ID" --skill-dir /absolute/path/to/agent-skill --out skill-upload.json
-python3 "$SKILL_DIR/scripts/dify_ce_console.py" agent-skills-list --agent-id "$AGENT_ID" --out skills-list.json
+python3 "${CLAUDE_SKILL_DIR}/scripts/dify_ce_console.py" agent-create --name "Demo Agent" --out agent-create.json
+python3 "${CLAUDE_SKILL_DIR}/scripts/dify_ce_console.py" agent-build-checkout --agent-id "$AGENT_ID" --out build-checkout.json
+python3 "${CLAUDE_SKILL_DIR}/scripts/dify_ce_console.py" agent-build-save --agent-id "$AGENT_ID" --payload-json build-payload.json
+python3 "${CLAUDE_SKILL_DIR}/scripts/dify_ce_console.py" agent-build-apply --agent-id "$AGENT_ID" --out build-apply.json
+python3 "${CLAUDE_SKILL_DIR}/scripts/dify_ce_console.py" agent-composer --agent-id "$AGENT_ID" --payload-json composer.json --validate-only
+python3 "${CLAUDE_SKILL_DIR}/scripts/dify_ce_console.py" agent-publish --agent-id "$AGENT_ID" --version-note "Validated demo version"
+python3 "${CLAUDE_SKILL_DIR}/scripts/dify_ce_console.py" agent-inspect --agent-id "$AGENT_ID" --out agent-inspect.json
+python3 "${CLAUDE_SKILL_DIR}/scripts/dify_ce_console.py" agent-skill-package --skill-dir /absolute/path/to/agent-skill --out skill-package.json
+python3 "${CLAUDE_SKILL_DIR}/scripts/dify_ce_console.py" agent-skill-upload --agent-id "$AGENT_ID" --skill-dir /absolute/path/to/agent-skill --out skill-upload.json
+python3 "${CLAUDE_SKILL_DIR}/scripts/dify_ce_console.py" agent-skills-list --agent-id "$AGENT_ID" --out skills-list.json
 ```
 
 Use Composer payloads copied from or validated against the exact target version. Do not invent Build/Composer fields from an older release.
@@ -302,16 +308,19 @@ For a Build-driven Agent, record these as separate evidence states:
 Use `difyctl` first when available:
 
 ```bash
-difyctl help -o json
-difyctl auth whoami
-difyctl describe app "$APP_ID" -o json
-difyctl run app "$APP_ID" --inputs-file /absolute/path/to/inputs.json -o json
+difyctl version                                   # client and (if signed in) server version
+difyctl login --resume --json                     # signed in? prints the account email
+difyctl help <words>                              # find an operation; output is JSON in a pipe
+difyctl describe console_app --app-id "$APP_ID" --json        # read input_schema first
+difyctl run console_app workflow --app-id "$APP_ID" --inputs @/absolute/path/to/inputs.json
 ```
+
+These are difyctl 1.19 commands. Operations come from the server's catalog, so check `difyctl help` when a command is rejected as unknown. Chat-type apps use `run console_app chat` or `run console_app advanced_chat`.
 
 Use Console draft runs for Workflow/advanced-chat iteration:
 
 ```bash
-python3 "$SKILL_DIR/scripts/dify_ce_console.py" run-draft \
+python3 "${CLAUDE_SKILL_DIR}/scripts/dify_ce_console.py" run-draft \
   --app-id "$APP_ID" --mode workflow \
   --inputs-json /absolute/path/to/inputs.json \
   --out /absolute/path/to/draft-run.json
@@ -321,13 +330,13 @@ Use the published Service API for final integration proof:
 
 ```bash
 # Workflow
-python3 "$SKILL_DIR/scripts/dify_ce_console.py" service-run \
+python3 "${CLAUDE_SKILL_DIR}/scripts/dify_ce_console.py" service-run \
   --api-key-env DIFY_APP_API_KEY \
   --inputs-json /absolute/path/to/inputs.json \
   --out /absolute/path/to/service-run.json
 
 # Standalone New Agent / chat endpoint
-python3 "$SKILL_DIR/scripts/dify_ce_console.py" service-chat-run \
+python3 "${CLAUDE_SKILL_DIR}/scripts/dify_ce_console.py" service-chat-run \
   --api-key-env DIFY_AGENT_API_KEY \
   --query "Run the approved demo task." \
   --inputs-json '{}' \

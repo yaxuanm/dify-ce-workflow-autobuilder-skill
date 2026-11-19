@@ -1,6 +1,6 @@
 # Dify Workflow and New Agent Autobuilder Skill
 
-> A version-aware Codex Skill for building, testing, debugging, and validating Dify Workflows, Chatflows, and New Agent apps across self-hosted Community Edition and Enterprise environments.
+> A version-aware Claude Code skill (also usable in Codex) for building, testing, debugging, and validating Dify Workflows, Chatflows, and New Agent apps across self-hosted Community Edition and Enterprise environments.
 
 ## Overview
 
@@ -20,11 +20,11 @@ Dify DSL compatibility is version- and runtime-dependent. This Skill prevents a 
 
 ### Core technologies
 
-`Dify` · `Agentic Workflows` · `RAG` · `Python` · `REST APIs` · `Self-hosted Enterprise` · `Codex Skills`
+`Dify` · `Agentic Workflows` · `RAG` · `Python` · `REST APIs` · `Self-hosted Enterprise` · `Claude Code Skills`
 
 ## 中文简介
 
-这个 Codex Skill 用于在本地或自托管 Dify CE / Enterprise 环境中，设计、生成、导入、测试、调试和验证：
+这个 Claude Code Skill（Codex 也能用）用于在本地或自托管 Dify CE / Enterprise 环境中，设计、生成、导入、测试、调试和验证：
 
 - Workflow / Chatflow；
 - 独立 New Agent App；
@@ -119,15 +119,19 @@ scripts/validate_new_agent_dsl.py
 
 ## 使用方式
 
-把目录安装到：
+Claude Code：把目录安装到
 
 ```text
-~/.codex/skills/dify-ce-workflow-autobuilder/
+~/.claude/skills/dify-ce-workflow-autobuilder/
 ```
+
+然后重启 Claude Code。脚本需要 Python 包 `requests` 和 `pyyaml`（`python3 -m pip install --user requests pyyaml`）。
+
+Codex：安装到 `~/.codex/skills/dify-ce-workflow-autobuilder/`（`agents/openai.yaml` 是给 Codex 用的）。
 
 ### 企业版 / 远程自托管用法
 
-**方式 1：Codex 能 SSH 到 Dify Enterprise 服务器**
+**方式 1：Agent 能 SSH 到 Dify Enterprise 服务器**
 
 这是最自动化的方式，适合用户自己的 self-hosted Enterprise、测试环境或 demo 环境。用户提供服务器连接信息和 Dify 入口，例如：
 
@@ -152,7 +156,7 @@ Skill 会先做只读检查，再等待用户确认设计方案。确认后才�
 7. 根据 trace 自动 debug；
 8. 输出已验证结果和剩余配置边界。
 
-**方式 2：Codex 不能 SSH，只生成 artifact**
+**方式 2：Agent 不能 SSH，只生成 artifact**
 
 适合客户环境不能提供 shell access、不能暴露 Console API，或只允许人工导入 Studio 的情况。Skill 会：
 
@@ -241,7 +245,7 @@ python3 scripts/dify_ce_console.py service-chat-run \
 
 ## English overview
 
-This Codex Skill builds and verifies Dify Workflows, Chatflows, standalone New Agent apps, and Workflow Agent V2 nodes against the exact target checkout.
+This Claude Code skill (also usable in Codex) builds and verifies Dify Workflows, Chatflows, standalone New Agent apps, and Workflow Agent V2 nodes against the exact target checkout.
 
 It adds version-aware handling for:
 

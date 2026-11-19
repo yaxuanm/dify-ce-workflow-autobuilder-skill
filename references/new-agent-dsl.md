@@ -259,7 +259,7 @@ Do these in order:
 Static validation:
 
 ```bash
-python3 "$SKILL_DIR/scripts/validate_new_agent_dsl.py" app.yml \
+python3 "${CLAUDE_SKILL_DIR}/scripts/validate_new_agent_dsl.py" app.yml \
   --target-repo /path/to/dify \
   --out validation/new-agent.json
 ```
@@ -267,7 +267,7 @@ python3 "$SKILL_DIR/scripts/validate_new_agent_dsl.py" app.yml \
 Import:
 
 ```bash
-python3 "$SKILL_DIR/scripts/dify_ce_console.py" import app.yml \
+python3 "${CLAUDE_SKILL_DIR}/scripts/dify_ce_console.py" import app.yml \
   --confirm-pending \
   --out import-result.json
 ```
@@ -275,7 +275,7 @@ python3 "$SKILL_DIR/scripts/dify_ce_console.py" import app.yml \
 Published Agent Service API:
 
 ```bash
-python3 "$SKILL_DIR/scripts/dify_ce_console.py" service-chat-run \
+python3 "${CLAUDE_SKILL_DIR}/scripts/dify_ce_console.py" service-chat-run \
   --api-key-env DIFY_AGENT_API_KEY \
   --query "Review this demo request." \
   --inputs-json '{}' \
