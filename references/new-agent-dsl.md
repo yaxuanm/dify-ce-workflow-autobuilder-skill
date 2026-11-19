@@ -27,7 +27,7 @@ Confirm these paths in the exact target Dify checkout. Names may move in later r
 | Agent Composer endpoints | `api/controllers/console/agent/composer.py` |
 | Agent publish/API endpoints | `api/controllers/console/agent/roster.py` |
 
-At the inspected current-main snapshot, the app DSL version is `0.7.0` and portable Agent package schema version is `1`. Always re-read the target checkout rather than copying these values blindly.
+As checked on Dify 1.20.0 (unchanged from 1.19.0), the app DSL version is `0.7.0` and portable Agent package schema version is `1`. Always re-read the target checkout rather than copying these values blindly.
 
 ## 2. Support matrix
 
@@ -320,7 +320,7 @@ Build Draft checkout/save/apply endpoints live beside the Agent roster endpoints
 
 ### The current graph generator is not an Agent-package generator
 
-At the inspected current-main snapshot, the Workflow generator planner has no first-class Agent V2 node contract, its snippets do not own the V2 package schema, and the generated result is a graph rather than a complete App DSL envelope. Adding one `agent` node snippet is insufficient because New Agent portability also needs top-level `agent_packages` and import materialization.
+As checked on Dify 1.20.0, the Workflow generator planner has no first-class Agent V2 node contract, its snippets do not own the V2 package schema, and the generated result is a graph rather than a complete App DSL envelope. Adding one `agent` node snippet is insufficient because New Agent portability also needs top-level `agent_packages` and import materialization.
 
 Use one of two paths:
 
