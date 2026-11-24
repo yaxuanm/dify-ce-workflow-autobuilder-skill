@@ -167,7 +167,13 @@ def discover_user_id() -> str:
 
 def make_console_session() -> requests.Session:
     try:
-        secret = sh(["docker", "exec", API_CONTAINER, "sh", "-lc", "printenv SECRET_KEY"])
+        # Default Docker deployments leave SECRET_KEY empty; Dify then generates one and keeps it
+        # in api/storage/.dify_secret_key inside the API container.
+        secret = sh(["docker", "exec", API_CONTAINER, "sh", "-lc",
+                     'if [ -n "$SECRET_KEY" ]; then printf %s "$SECRET_KEY"; '
+                     'else cat /app/api/storage/.dify_secret_key 2>/dev/null; fi'])
+        if not secret:
+            raise RuntimeError("SECRET_KEY is empty and /app/api/storage/.dify_secret_key was not found")
     except Exception as exc:
         raise SystemExit(
             f"Could not read SECRET_KEY from {API_CONTAINER}. Set DIFY_API_CONTAINER if the API container has a different name, "

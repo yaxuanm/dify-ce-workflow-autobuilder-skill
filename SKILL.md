@@ -22,8 +22,6 @@ The scripts live in this skill's folder: `${CLAUDE_SKILL_DIR}/scripts/`. Referen
 
 `dify_ce_console.py` needs the Python packages `requests` and `pyyaml`. Check once with `python3 -c "import requests, yaml"`; if that fails, ask the user before running `python3 -m pip install --user requests pyyaml`.
 
-## Preconditions
-
 ## Sign-in options
 
 Pick the first option that works on the target:
@@ -34,11 +32,13 @@ Pick the first option that works on the target:
 
 A personal access token authorizes `/openapi/v1` only. It does not open `/console/api`, so `dify_ce_console.py` still needs the local Console JWT.
 
+### Preconditions for the local Console path
+
 Use the automated Console path only when Dify CE or Enterprise is local/self-hosted and Claude can reach the host shell and API container. Typical requirements are:
 
 - a reachable Dify web/API base URL;
 - a running API container, commonly `docker-api-1`;
-- access to `SECRET_KEY` for a short-lived local Console JWT;
+- access to `SECRET_KEY` for a short-lived local Console JWT (when it is empty, as in a default Docker deploy, the script reads the generated key from `/app/api/storage/.dify_secret_key` in the API container);
 - an existing console account;
 - configured model providers and any required plugin credentials.
 
@@ -75,10 +75,9 @@ Before designing nodes, inspect the target checkout:
 ```bash
 rg -n 'CURRENT_APP_DSL_VERSION' <dify-repo>/api/constants/dsl_version.py
 test -f <dify-repo>/api/services/agent/dsl_service.py && echo agent-package-dsl-supported
-test -f <dify-repo>/api/core/workflow/nodes/agent_v2/discriminator.py -o \
-     -f <dify-repo>/api/core/workflow/nodes/agent_v2/validators.py && echo agent-v2-supported
+test -d <dify-repo>/api/core/workflow/nodes/agent_v2 && echo agent-v2-supported
 test -d <dify-repo>/api/core/workflow/nodes/human_input_v2 && echo human-input-v2-supported
-grep -h 'HUMAN_INPUT_V2_VERSION *=' -r <dify-repo>/api/core/workflow/nodes/human_input_v2/ 2>/dev/null
+grep -hE '^HUMAN_INPUT_V2_VERSION\b[^=]*=' -r <dify-repo>/api/core/workflow/nodes/human_input_v2/ 2>/dev/null
 ```
 
 Checked against Dify 1.20.0: App DSL is still `0.7.0`, the same as 1.19.0.
