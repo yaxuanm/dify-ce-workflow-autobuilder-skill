@@ -57,6 +57,10 @@ def ce_install_guide() -> str:
         - Docker Compose is 2.24.0 or later.
         - For local testing, use at least 2 CPU cores and 4 GiB RAM; prefer 8 GiB memory on Docker Desktop.
         - Port 80 is available, or edit EXPOSE_NGINX_PORT in dify/docker/.env before starting.
+        - On 1.20+, put backend overrides in docker/envs/core-services/api-worker.env and Web overrides
+          (for example NEXT_PUBLIC_ENABLE_AGENT_V2_IN_CHATFLOW=true) in docker/envs/core-services/web.env.
+          shared.env is no longer loaded; rename it to api-worker.env if you have one.
+          Apply changes with `docker compose up -d`; a plain restart does not reload env files.
 
         Commands:
 
@@ -163,7 +167,13 @@ def discover_user_id() -> str:
 
 def make_console_session() -> requests.Session:
     try:
-        secret = sh(["docker", "exec", API_CONTAINER, "sh", "-lc", "printenv SECRET_KEY"])
+        # Default Docker deployments leave SECRET_KEY empty; Dify then generates one and keeps it
+        # in api/storage/.dify_secret_key inside the API container.
+        secret = sh(["docker", "exec", API_CONTAINER, "sh", "-lc",
+                     'if [ -n "$SECRET_KEY" ]; then printf %s "$SECRET_KEY"; '
+                     'else cat /app/api/storage/.dify_secret_key 2>/dev/null; fi'])
+        if not secret:
+            raise RuntimeError("SECRET_KEY is empty and /app/api/storage/.dify_secret_key was not found")
     except Exception as exc:
         raise SystemExit(
             f"Could not read SECRET_KEY from {API_CONTAINER}. Set DIFY_API_CONTAINER if the API container has a different name, "

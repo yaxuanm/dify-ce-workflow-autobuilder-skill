@@ -22,13 +22,23 @@ The scripts live in this skill's folder: `${CLAUDE_SKILL_DIR}/scripts/`. Referen
 
 `dify_ce_console.py` needs the Python packages `requests` and `pyyaml`. Check once with `python3 -c "import requests, yaml"`; if that fails, ask the user before running `python3 -m pip install --user requests pyyaml`.
 
-## Preconditions
+## Sign-in options
+
+Pick the first option that works on the target:
+
+1. **difyctl with a personal access token (Dify 1.20+).** `/openapi/v1` is on by default from 1.20 (`OPENAPI_ENABLED=true`; on 1.19 it must be set). The user creates a token on their **Account** page, scoped to the workspace, and puts it in `DIFY_TOKEN` themselves, together with `DIFY_SERVER`. Never ask for the token in chat.
+2. **difyctl browser login** (`difyctl login`), when the server answers `/openapi/v1/_version` with 200 but the user has no token.
+3. **The local Console path below**, only for console-only operations that difyctl does not cover (Agent Composer, Agent config Skill uploads, Build Mode), or when `/openapi/v1` is off.
+
+A personal access token authorizes `/openapi/v1` only. It does not open `/console/api`, so `dify_ce_console.py` still needs the local Console JWT.
+
+### Preconditions for the local Console path
 
 Use the automated Console path only when Dify CE or Enterprise is local/self-hosted and Claude can reach the host shell and API container. Typical requirements are:
 
 - a reachable Dify web/API base URL;
 - a running API container, commonly `docker-api-1`;
-- access to `SECRET_KEY` for a short-lived local Console JWT;
+- access to `SECRET_KEY` for a short-lived local Console JWT (when it is empty, as in a default Docker deploy, the script reads the generated key from `/app/api/storage/.dify_secret_key` in the API container);
 - an existing console account;
 - configured model providers and any required plugin credentials.
 
@@ -50,6 +60,8 @@ For every target, record:
 - reachable web/API base URL and whether Claude has shell access to the host;
 - API container name/image/tag and gateway/port layout;
 - current App DSL version;
+- Human Input node version: v2 (`human-input`, `version` set to the v2 value) when `api/core/workflow/nodes/human_input_v2/` exists, otherwise legacy;
+- whether Agent V2 nodes are allowed in Chatflow (`NEXT_PUBLIC_ENABLE_AGENT_V2_IN_CHATFLOW`, 1.20+, default `false`);
 - whether Workflow/Chatflow import APIs are present;
 - whether standalone `app.mode: agent`, `agent_packages`, Workflow Agent V2, Agent config Skill zip, and Service API tests are supported;
 - whether model providers, plugins, Knowledge, and credentials are configured enough to run.
@@ -63,9 +75,12 @@ Before designing nodes, inspect the target checkout:
 ```bash
 rg -n 'CURRENT_APP_DSL_VERSION' <dify-repo>/api/constants/dsl_version.py
 test -f <dify-repo>/api/services/agent/dsl_service.py && echo agent-package-dsl-supported
-test -f <dify-repo>/api/core/workflow/nodes/agent_v2/discriminator.py -o \
-     -f <dify-repo>/api/core/workflow/nodes/agent_v2/validators.py && echo agent-v2-supported
+test -d <dify-repo>/api/core/workflow/nodes/agent_v2 && echo agent-v2-supported
+test -d <dify-repo>/api/core/workflow/nodes/human_input_v2 && echo human-input-v2-supported
+grep -hE '^HUMAN_INPUT_V2_VERSION\b[^=]*=' -r <dify-repo>/api/core/workflow/nodes/human_input_v2/ 2>/dev/null
 ```
+
+Checked against Dify 1.20.0: App DSL is still `0.7.0`, the same as 1.19.0.
 
 Read exported DSLs from that same runtime when available. Prefer a fresh export from the target workspace as the canonical shape.
 
@@ -75,7 +90,7 @@ Classify support:
 - **Agent V2 without portable packages:** create/publish the Agent through the verified Composer/Agent APIs or UI, then bind it to the Workflow. Do not invent a portable package.
 - **Portable New Agent DSL:** `agent_packages` import/export is present. Follow [references/new-agent-dsl.md](references/new-agent-dsl.md).
 
-Never present current-main fields as valid for an older release merely because both use a node named `agent`.
+Never present fields from a newer release as valid for an older release merely because both use a node named `agent`.
 
 Also inspect the Agent backend/runtime path before promising an executable New Agent. A valid UI schema or successful DSL import does not prove that the API/worker can reach the Agent backend.
 
@@ -87,6 +102,7 @@ Use the smallest surface that proves the requirement:
 |---|---|
 | Reusable autonomous worker with Prompt, Skills, Files, Knowledge, and Tools | Standalone New Agent app (`app.mode: agent`) |
 | Event-driven or governed business process around flexible judgment | Workflow with an Agent V2 node |
+| Conversation that delegates a step to an Agent and shows its tool activity | `advanced-chat` with an Agent V2 node, only when the server enables `NEXT_PUBLIC_ENABLE_AGENT_V2_IN_CHATFLOW` (1.20+); otherwise use a Workflow or a standalone Agent |
 | Conversational, multi-turn assistant with routing | `advanced-chat` |
 | Batch, scheduled, evaluation, or API-first processing | `workflow` |
 | Reuse one published Agent across several Workflows | Standalone roster Agent plus explicit Workflow Composer binding |
@@ -151,7 +167,7 @@ Therefore, import success is never enough. Read all import warnings and complete
 
 Build Mode is not a fourth portable format. Its Build Draft is editor-scoped temporary state. The generated Skill/File/Prompt changes must be reviewed and **Applied** to the ordinary Agent Draft before an export can contain them. Apply still does not publish the Agent.
 
-Do not assume Dify's built-in graph generator can emit a New Agent app merely because it can generate Workflow nodes. At the inspected current-main version, its planner/build result is graph-only and does not own top-level `agent_packages`. Use one of these supported paths instead:
+Do not assume Dify's built-in graph generator can emit a New Agent app merely because it can generate Workflow nodes. As checked on Dify 1.20.0, its planner/build result is graph-only and does not own top-level `agent_packages`. Use one of these supported paths instead:
 
 - generate a complete external App DSL envelope with `agent_packages`, then import it; or
 - create a V2 node shell in Studio, save the Workflow Draft, and use the Workflow Agent Composer API/UI to materialize the binding.
@@ -187,7 +203,7 @@ Prefer the most specific Dify surface:
 - retrieval: Knowledge Retrieval or New Agent Knowledge sets;
 - flexible multi-source judgment: New Agent with read-only tools;
 - external reads/writes: plugin Tool or verified HTTP API;
-- human approval: Human Input;
+- human approval: Human Input. On 1.20+ use the v2 node: recipients come from Contacts (contact, initiator, all workspace contacts, one-time or dynamic email) and delivery can go to email or an IM channel. Copy the node shape from a fresh export of the target; do not write legacy Human Input fields into a v2 node. Legacy nodes keep working and are not migrated automatically;
 - deterministic parsing, validation, math, and routing: Code/If-Else;
 - natural-language synthesis: LLM or Agent;
 - chat response: Answer; Workflow result: Output/End.
